@@ -102,10 +102,6 @@ CREATE TABLE passwords (
 
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Contact
 
 For any questions or suggestions, feel free to open an issue or contact me at [ankushgupta1806@gmail.com].
