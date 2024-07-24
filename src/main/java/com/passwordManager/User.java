@@ -1,8 +1,5 @@
 package com.passwordManager;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class User {
     private String name;
     private String email;
@@ -17,16 +14,8 @@ public class User {
         this.passwordNodeHead = null;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public String getEmail() {
         return email;
-    }
-
-    public String getPassword() {
-        return password;
     }
 
     public PasswordNode getPasswordNodeHead() {
@@ -58,13 +47,5 @@ public class User {
                 current = current.next;
             }
         }
-    }
-
-    public User getNext() {
-        return next;
-    }
-
-    public void setNext(User next) {
-        this.next = next;
     }
 }
