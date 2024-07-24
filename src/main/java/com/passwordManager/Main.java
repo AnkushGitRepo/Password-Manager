@@ -65,6 +65,7 @@ class Main {
             boolean isAuthenticated = dbHandler.authenticateUser(email, password);
             if (isAuthenticated) {
                 System.out.println("Login successful.");
+                dbHandler.loadUserData(email); // Load user data from database
                 showPasswordManagerMenu(email); // Pass email to identify the user
             } else {
                 System.out.println("Invalid email or password.");
@@ -81,7 +82,8 @@ class Main {
             System.out.println("2. Search Password");
             System.out.println("3. Update Password");
             System.out.println("4. Delete Password");
-            System.out.println("5. Logout");
+            System.out.println("5. Show Recent Activities");
+            System.out.println("6. Logout");
             int choice = scanner.nextInt();
             scanner.nextLine(); // Consume newline left-over
             switch (choice) {
@@ -98,6 +100,9 @@ class Main {
                     deletePassword(email);
                     break;
                 case 5:
+                    dbHandler.printLog(email);
+                    break;
+                case 6:
                     passwordManagerLoop = false;
                     break;
                 default:
@@ -117,8 +122,7 @@ class Main {
         String password = scanner.nextLine();
 
         try {
-            String encryptedPassword = PasswordUtils.encrypt(password);
-            dbHandler.storePassword(email, siteUrl, siteName, username, encryptedPassword);
+            dbHandler.storePassword(email, siteUrl, siteName, username, password);
             System.out.println("Password added successfully.");
         } catch (Exception e) {
             System.out.println("Error storing password: " + e.getMessage());
@@ -128,11 +132,15 @@ class Main {
     private static void searchPassword(String email) {
         System.out.print("Enter Site URL or Site Name to search: ");
         String searchCriteria = scanner.nextLine();
-        String password = dbHandler.searchPassword(email, searchCriteria);
-        if (password != null) {
-            System.out.println("Password: " + password);
-        } else {
-            System.out.println("No password found for the given criteria.");
+        try {
+            String password = dbHandler.searchPassword(email, searchCriteria);
+            if (password != null) {
+                System.out.println("Password: " + password);
+            } else {
+                System.out.println("No password found for the given criteria.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error retrieving password: " + e.getMessage());
         }
     }
 
@@ -143,13 +151,8 @@ class Main {
         String newPassword = scanner.nextLine();
 
         try {
-            String encryptedPassword = PasswordUtils.encrypt(newPassword);
-            boolean isUpdated = dbHandler.updatePassword(email, searchCriteria, encryptedPassword);
-            if (isUpdated) {
-                System.out.println("Password updated successfully.");
-            } else {
-                System.out.println("No password found for the given criteria.");
-            }
+            dbHandler.updatePassword(email, searchCriteria, newPassword);
+            System.out.println("Password updated successfully.");
         } catch (Exception e) {
             System.out.println("Error updating password: " + e.getMessage());
         }
@@ -158,11 +161,15 @@ class Main {
     private static void deletePassword(String email) {
         System.out.print("Enter Site URL or Site Name to delete: ");
         String searchCriteria = scanner.nextLine();
-        boolean isDeleted = dbHandler.deletePassword(email, searchCriteria);
-        if (isDeleted) {
-            System.out.println("Password deleted successfully.");
-        } else {
-            System.out.println("No password found for the given criteria.");
+        try {
+            boolean isDeleted = dbHandler.deletePassword(email, searchCriteria);
+            if (isDeleted) {
+                System.out.println("Password deleted successfully.");
+            } else {
+                System.out.println("No password found for the given criteria.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error deleting password: " + e.getMessage());
         }
     }
 
