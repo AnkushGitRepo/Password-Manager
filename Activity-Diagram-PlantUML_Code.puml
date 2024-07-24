@@ -1,0 +1,72 @@
+@startuml
+
+start
+
+:Display main menu (1. Sign Up, 2. Log In, 3. Exit);
+:User selects an option;
+
+if (User choice = 1) then (yes)
+    :Enter email;
+    :Generate email verification code;
+    :Send verification email;
+    :User enters verification code;
+    if (Verification successful?) then (yes)
+        :Enter name, phone number, and password;
+        :Generate encryption key;
+        :Hash password;
+        :Store user details in database;
+        :Account created successfully;
+    else (no)
+        :Notify user of incorrect verification code;
+        :Retry verification or fail;
+    endif
+else (no)
+    if (User choice = 2) then (yes)
+        :Enter email and password;
+        :Fetch stored password and encryption key from database;
+        :Verify password;
+        if (Password correct?) then (yes)
+            :Login successful;
+            :Display user options (Add Password, Update Password, Delete Password, Search Password, Log Activity);
+            while (User performs an action) is (yes)
+                :User selects an action;
+                if (Add Password) then (yes)
+                    :Enter site URL, site name, username, and password;
+                    :Encrypt password;
+                    :Store password details in database;
+                    :Log activity;
+                else if (Update Password) then (yes)
+                    :Enter password ID and new password;
+                    :Fetch password details from database;
+                    :Encrypt new password;
+                    :Update password details in database;
+                    :Log activity;
+                else if (Delete Password) then (yes)
+                    :Enter password ID;
+                    :Delete password details from database;
+                    :Log activity;
+                else if (Search Password) then (yes)
+                    :Enter search criteria (site URL, site name, username);
+                    :Fetch matching passwords from database;
+                    :Display results;
+                    :Log activity;
+                else if (Log Activity) then (yes)
+                    :Fetch and display user activity log from database;
+                endif
+            endwhile (no)
+        else (no)
+            :Notify user of incorrect password;
+            :Login Failed;
+        endif
+    else (no)
+        if (User choice = 3) then (yes)
+            stop
+        else (no)
+            :Notify user of invalid option;
+        endif
+    endif
+endif
+
+stop
+
+@enduml
