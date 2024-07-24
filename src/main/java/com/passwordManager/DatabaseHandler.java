@@ -4,10 +4,13 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.NoSuchAlgorithmException;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 public class DatabaseHandler {
-    private LinkedListDSA linkedListDSA = new LinkedListDSA();
+    private LinkedListDSA<User> userList = new LinkedListDSA<>();
 
     private Connection connect() {
         String url = "jdbc:postgresql://localhost:5432/secure"; // Update with your DB details
@@ -33,9 +36,26 @@ public class DatabaseHandler {
             pstmt.setString(4, hashedPassword);
             pstmt.setString(5, encryptionKey); // Store encryption key
             pstmt.executeUpdate();
+            User user = new User(name, email, hashedPassword);
+            userList.add(user);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public boolean emailExists(String email) {
+        String query = "SELECT COUNT(*) FROM users WHERE email = ?";
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, email);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error checking email existence: " + e.getMessage());
+        }
+        return false;
     }
 
     public boolean authenticateUser(String email, String password) throws Exception {
@@ -91,7 +111,7 @@ public class DatabaseHandler {
         }
 
         PasswordNode node = new PasswordNode(siteUrl, siteName, username, encryptedPwd);
-        User user = linkedListDSA.findUserByEmail(email);
+        User user = userList.findUserByEmail(email);
         if (user != null) {
             user.addPasswordNode(node);
         }
@@ -125,7 +145,7 @@ public class DatabaseHandler {
                 return false;
             }
 
-            PasswordNode node = linkedListDSA.findUserByEmail(email).getPasswordNodeHead();
+            PasswordNode node = userList.findUserByEmail(email).getPasswordNodeHead();
             while (node != null) {
                 if (node.getSiteUrl().equals(searchCriteria) || node.getSiteName().equals(searchCriteria)) {
                     node.setEncryptedPassword(encryptedPwd);
@@ -153,53 +173,53 @@ public class DatabaseHandler {
         }
     }
 
-    public String searchPassword(String email, String searchCriteria) {
+    public List<String> searchPassword(String email, String searchCriteria) {
         int userId = getUserIdByEmail(email);
         String encryptionKey = getUserEncryptionKeyByEmail(email);
         PasswordUtils.setEncryptionKey(encryptionKey); // Set encryption key before decrypting
 
-        PasswordNode node = linkedListDSA.findUserByEmail(email).getPasswordNodeHead();
-        while (node != null) {
-            if (node.getSiteUrl().equals(searchCriteria) || node.getSiteName().equals(searchCriteria)) {
-                logActivity(userId, "Searched password for site: " + searchCriteria);
-                try {
-                    return PasswordUtils.decrypt(node.getEncryptedPassword());
-                } catch (Exception e) {
-                    System.out.println("Error decrypting password: " + e.getMessage());
-                    return null;
-                }
-            }
-            node = node.next;
-        }
-        String query = "SELECT password FROM passwords WHERE user_id = ? AND (site_url = ? OR site_name = ?)";
+        List<String> matchedSites = new ArrayList<>();
+        String query = "SELECT site_url, site_name, username, password FROM passwords WHERE user_id = ? AND (site_url ILIKE ? OR site_name ILIKE ? OR username ILIKE ?)";
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, userId);
-            pstmt.setString(2, searchCriteria);
-            pstmt.setString(3, searchCriteria);
+            pstmt.setString(2, "%" + searchCriteria + "%");
+            pstmt.setString(3, "%" + searchCriteria + "%");
+            pstmt.setString(4, "%" + searchCriteria + "%");
             ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
+            while (rs.next()) {
+                String siteUrl = rs.getString("site_url");
+                String siteName = rs.getString("site_name");
+                String username = rs.getString("username");
                 String encryptedPassword = rs.getString("password");
-                logActivity(userId, "Searched password for site: " + searchCriteria);
-                try {
-                    return PasswordUtils.decrypt(encryptedPassword);
-                } catch (Exception e) {
-                    System.out.println("Error decrypting password: " + e.getMessage());
-                    return null;
-                }
-            } else {
-                return null;
+                String decryptedPassword = PasswordUtils.decrypt(encryptedPassword);
+                matchedSites.add(formatSiteData(siteUrl, siteName, username, decryptedPassword));
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
-            return null;
+        } catch (Exception e) {
+            System.out.println("Error decrypting password: " + e.getMessage());
         }
+
+        return matchedSites;
+    }
+
+    private String formatSiteData(String siteUrl, String siteName, String username, String decryptedPassword) {
+        return String.format(
+                "-------------------------------------------\n" +
+                        "Site URL      : %s\n" +
+                        "Site Name     : %s\n" +
+                        "Username      : %s\n" +
+                        "Password      : %s\n" +
+                        "-------------------------------------------",
+                siteUrl, siteName, username, decryptedPassword
+        );
     }
 
     public boolean deletePassword(String email, String searchCriteria) {
         int userId = getUserIdByEmail(email);
         if (passwordExists(userId, searchCriteria)) {
-            User user = linkedListDSA.findUserByEmail(email);
+            User user = userList.findUserByEmail(email);
             PasswordNode node = user.getPasswordNodeHead();
             while (node != null) {
                 if (node.getSiteUrl().equals(searchCriteria) || node.getSiteName().equals(searchCriteria)) {
@@ -312,10 +332,10 @@ public class DatabaseHandler {
 
     public void loadUserData(String email) {
         int userId = getUserIdByEmail(email);
-        User user = linkedListDSA.findUserByEmail(email);
+        User user = userList.findUserByEmail(email);
         if (user == null) {
             user = new User(getUserNameByEmail(email), email, getUserPasswordByEmail(email));
-            linkedListDSA.addUser(user);
+            userList.add(user);
         }
 
         String query = "SELECT site_url, site_name, username, password FROM passwords WHERE user_id = ?";
@@ -351,18 +371,21 @@ public class DatabaseHandler {
     public void printLog(String email) {
         int userId = getUserIdByEmail(email);
         String query = "SELECT activity, timestamp FROM logs WHERE user_id = ? ORDER BY timestamp DESC";
+        StackDSA<String> userActionStack = new StackDSA<>();
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setInt(1, userId);
             ResultSet rs = pstmt.executeQuery();
-            System.out.println("Recent Activities:");
             while (rs.next()) {
                 String activity = rs.getString("activity");
                 Timestamp timestamp = rs.getTimestamp("timestamp");
-                System.out.println(timestamp + ": " + activity);
+                String formattedTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(timestamp);
+                String logEntry = formattedTimestamp + ": " + activity;
+                userActionStack.push(logEntry);
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+        Log.printLog(userActionStack);
     }
 }
