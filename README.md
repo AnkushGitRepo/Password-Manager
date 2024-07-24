@@ -70,19 +70,20 @@ A console-based password management system where users can securely manage their
 
 ## Database Schema
 
-### - Users table to store user information.
+### Users table to store user information
 ```sql
-
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     phone_number VARCHAR(10) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+	  encryption_key VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
-### - Passwords table to store the user's managed passwords.
+
+### Passwords table to store the user's managed passwords
 ```sql
 CREATE TABLE passwords (
     id SERIAL PRIMARY KEY,
@@ -95,7 +96,17 @@ CREATE TABLE passwords (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+```
 
+### Logs table to store user activity logs
+```sql
+CREATE TABLE logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    activity VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 ```
 
 ## Contributing
