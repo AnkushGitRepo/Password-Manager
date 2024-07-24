@@ -3,24 +3,19 @@ package com.passwordManager;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
-import java.security.SecureRandom;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import javax.security.auth.kerberos.EncryptionKey;
+import java.security.SecureRandom;
 
 public class PasswordUtils {
     private static final String ALGORITHM = "AES";
-    private static final String TRANSFORMATION = "AES";
-    private static String ENCRYPTION_KEY = ""; // Replace with your actual key
+    private static final String TRANSFORMATION = "AES/ECB/PKCS5Padding";
+    private static String encryptionKey;
 
-    static {
-        try {
-            ENCRYPTION_KEY = KeyGeneratorUtil.generateKey();
-        } catch (NoSuchAlgorithmException e) {
-            System.out.println(e.getMessage());
-        }
+    public static void setEncryptionKey(String key) {
+        encryptionKey = key;
     }
 
     public static String encrypt(String input) throws Exception {
@@ -32,14 +27,14 @@ public class PasswordUtils {
     }
 
     private static byte[] doCrypto(int cipherMode, String input) throws Exception {
-        SecretKeySpec secretKey = new SecretKeySpec(Base64.getDecoder().decode(ENCRYPTION_KEY), ALGORITHM);
+        SecretKeySpec secretKey = new SecretKeySpec(encryptionKey.getBytes(), ALGORITHM);
         Cipher cipher = Cipher.getInstance(TRANSFORMATION);
         cipher.init(cipherMode, secretKey);
         return cipher.doFinal(input.getBytes());
     }
 
     private static byte[] doCrypto(int cipherMode, byte[] input) throws Exception {
-        SecretKeySpec secretKey = new SecretKeySpec(Base64.getDecoder().decode(ENCRYPTION_KEY), ALGORITHM);
+        SecretKeySpec secretKey = new SecretKeySpec(encryptionKey.getBytes(), ALGORITHM);
         Cipher cipher = Cipher.getInstance(TRANSFORMATION);
         cipher.init(cipherMode, secretKey);
         return cipher.doFinal(input);
