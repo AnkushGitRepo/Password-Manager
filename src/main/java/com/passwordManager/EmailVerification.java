@@ -38,8 +38,8 @@ public class EmailVerification {
     }
 
     private static boolean sendVerificationEmail(String email, String verificationCode) {
-        final String username = "lju.xxx@gmail.com"; // Replace with your email
-        final String password = "xxxx tcld xxxx fjbm"; // Replace with your email password
+        final String username = "lju.sem2project@gmail.com"; // Replace with your email
+        final String password = "dpgn tcld gdvr fjbm"; // Replace with your email password
 
         Properties properties = new Properties();
         properties.put("mail.smtp.auth", "true");
@@ -55,7 +55,7 @@ public class EmailVerification {
 
         try {
             Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress("lju.xxx@gmail.com")); // Replace with your email
+            message.setFrom(new InternetAddress("lju.sem2project@gmail.com")); // Replace with your email
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(email));
             message.setSubject("Your Verification Code");
             message.setText("Your verification code is: " + verificationCode);
