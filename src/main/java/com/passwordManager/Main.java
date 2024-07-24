@@ -1,5 +1,7 @@
 package com.passwordManager;
 
+import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Scanner;
 
 class Main {
@@ -7,12 +9,14 @@ class Main {
     private static DatabaseHandler dbHandler = new DatabaseHandler();
 
     public static void main(String[] args) {
+        displayWelcomeMessage();
         boolean mainMenuLoop = true;
         while (mainMenuLoop) {
             System.out.println("1. Register");
             System.out.println("2. Login");
             System.out.println("3. Exit");
-            int choice = scanner.nextInt();
+            System.out.print("Enter your choice: ");
+            int choice = getInputInt();
             scanner.nextLine(); // Consume newline left-over
             switch (choice) {
                 case 1:
@@ -22,6 +26,7 @@ class Main {
                     loginUser();
                     break;
                 case 3:
+                    displayClosingMessage();
                     mainMenuLoop = false;
                     break;
                 default:
@@ -30,14 +35,40 @@ class Main {
         }
     }
 
+    private static void displayWelcomeMessage() {
+        System.out.println("\n=======================================");
+        System.out.println("  Welcome to the Password Manager App  ");
+        System.out.println("=======================================");
+        System.out.println("Manage your passwords securely and easily.");
+        System.out.println("Please select an option from the menu below:\n");
+    }
+
+    private static void displayClosingMessage() {
+        System.out.println("\n=======================================");
+        System.out.println("   Thank you for using our application  ");
+        System.out.println("=======================================");
+        System.out.println("Goodbye! Stay secure!");
+    }
+
     private static void registerNewUser() {
         System.out.print("Enter your email address: ");
         String email = scanner.nextLine();
 
         boolean emailVerificationStatus = EmailVerification.verifyMail(email);
         if (emailVerificationStatus) {
-            System.out.print("Enter your name: ");
-            String name = scanner.nextLine();
+            String name = null;
+            boolean nameLoop = true;
+            while(nameLoop) {
+                System.out.print("Enter your name: ");
+                name = scanner.nextLine();
+                if (isValidName(name)) {
+                    nameLoop = false;
+                }
+                else{
+                    System.out.println("Invalid Name As Input, Please Try Again.");
+                }
+            }
+
 
             String phoneNumber = getValidPhoneNumber();
             String password = getPassword();
@@ -58,6 +89,13 @@ class Main {
     private static void loginUser() {
         System.out.print("Enter your email: ");
         String email = scanner.nextLine();
+
+        // Check if the email exists in the database
+        if (!dbHandler.emailExists(email)) {
+            System.out.println("Email does not exist. Please register first.");
+            return;
+        }
+
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
 
@@ -84,7 +122,8 @@ class Main {
             System.out.println("4. Delete Password");
             System.out.println("5. Show Recent Activities");
             System.out.println("6. Logout");
-            int choice = scanner.nextInt();
+            System.out.print("Enter your choice: ");
+            int choice = getInputInt();
             scanner.nextLine(); // Consume newline left-over
             switch (choice) {
                 case 1:
@@ -130,14 +169,17 @@ class Main {
     }
 
     private static void searchPassword(String email) {
-        System.out.print("Enter Site URL or Site Name to search: ");
+        System.out.print("Enter Site URL, Site Name, Username, or Initials to search: ");
         String searchCriteria = scanner.nextLine();
         try {
-            String password = dbHandler.searchPassword(email, searchCriteria);
-            if (password != null) {
-                System.out.println("Password: " + password);
+            List<String> matchedSites = dbHandler.searchPassword(email, searchCriteria);
+            if (!matchedSites.isEmpty()) {
+                System.out.println("Matched Sites:");
+                for (String site : matchedSites) {
+                    System.out.println(site);
+                }
             } else {
-                System.out.println("No password found for the given criteria.");
+                System.out.println("No matches found for the given criteria.");
             }
         } catch (Exception e) {
             System.out.println("Error retrieving password: " + e.getMessage());
@@ -193,12 +235,12 @@ class Main {
     }
 
     // To check if the given string contains a number or not
-    public static boolean containsNumber(String str) {
-        if (str == null || str.isEmpty()) {
+    public static boolean isValidName(String name) {
+        if (name == null || name.isEmpty()) {
             return false;
         }
-        for (char c : str.toCharArray()) {
-            if (Character.isDigit(c)) {
+        for (char c : name.toCharArray()) {
+            if (!Character.isLetter(c) && c != ' ') {
                 return false;
             }
         }
@@ -217,5 +259,16 @@ class Main {
             }
         }
         return true;
+    }
+
+    private static int getInputInt() {
+        while (true) {
+            try {
+                return scanner.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.print("Invalid input. Please enter a valid number: ");
+                scanner.nextLine(); // Consume invalid input
+            }
+        }
     }
 }
